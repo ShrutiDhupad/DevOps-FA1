@@ -1,0 +1,31 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform variable files containing secrets
+*.tfvars
+!terraform/environments/qa.tfvars
+!terraform/environments/uat.tfvars
+!terraform/environments/prod.tfvars
+
+# Terraform lock file
+# Keep this file in Git for reproducible provider versions
+# .terraform.lock.hcl
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Environment files
+.env
