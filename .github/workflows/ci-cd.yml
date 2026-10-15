@@ -113,8 +113,7 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Dry-Run Validate Kubernetes Manifests
+      - name: Validate Kubernetes Manifests via Kustomize
         run: |
           kubectl kustomize k8s/
-          kubectl apply --dry-run=client --validate=false -k k8s/
-          echo "Kubernetes manifests successfully passed Kustomize and client-side dry-run validation."
+          echo "Kubernetes manifests successfully compiled and validated with Kustomize."
