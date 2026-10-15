@@ -11,21 +11,30 @@ crash.*.log
 !terraform/environments/uat.tfvars
 !terraform/environments/prod.tfvars
 
-# Terraform lock file
-# Keep this file in Git for reproducible provider versions
-# .terraform.lock.hcl
-
 # OS files
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE & Editor
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Python
+# Python & Virtual Environments
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
 
-# Environment files
+# Environment & Secret files
 .env
+.env.*
+!*.example

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fa2-devops
+  labels:
+    environment: production
+    project: fa2-devops-assessment

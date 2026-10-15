@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: fa2-devops
+  labels:
+    app: grafana
+    app.kubernetes.io/part-of: fa2-devops
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          timeInterval: 5s
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provider
+  namespace: fa2-devops
+  labels:
+    app: grafana
+    app.kubernetes.io/part-of: fa2-devops
+data:
+  provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'FA2 Dashboards'
+        orgId: 1
+        folder: 'DevOps Assessment'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+  namespace: fa2-devops
+  labels:
+    app: grafana
+    app.kubernetes.io/part-of: fa2-devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "admin"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          volumeMounts:
+            - name: datasources-volume
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-provider-volume
+              mountPath: /etc/grafana/provisioning/dashboards
+      volumes:
+        - name: datasources-volume
+          configMap:
+            name: grafana-datasources
+        - name: dashboards-provider-volume
+          configMap:
+            name: grafana-dashboards-provider
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: fa2-devops
+  labels:
+    app: grafana
+    app.kubernetes.io/part-of: fa2-devops
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30300
+      protocol: TCP
+  selector:
+    app: grafana

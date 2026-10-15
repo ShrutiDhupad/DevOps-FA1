@@ -1,0 +1,120 @@
+name: FA2 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: fa2-backend
+  FRONTEND_IMAGE_NAME: fa2-frontend
+
+jobs:
+  # ==========================================
+  # STAGE 1: Test and Build Verification
+  # ==========================================
+  test:
+    name: Build & Automated Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python Runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r docker/backend/requirements.txt
+
+      - name: Run Backend & Frontend Automated Tests
+        run: |
+          pytest -v --tb=short
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          docker compose config
+
+  # ==========================================
+  # STAGE 2: Build & Publish Docker Images to GHCR
+  # ==========================================
+  build-and-push:
+    name: Build & Publish Container Images
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Lowercase Image Names
+        id: meta
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend_image=${{ env.REGISTRY }}/${OWNER_LOWER}/${{ env.BACKEND_IMAGE_NAME }}" >> $GITHUB_OUTPUT
+          echo "frontend_image=${{ env.REGISTRY }}/${OWNER_LOWER}/${{ env.FRONTEND_IMAGE_NAME }}" >> $GITHUB_OUTPUT
+          echo "sha_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/backend
+          file: ./docker/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.backend_image }}:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.backend_image }}:latest
+
+      - name: Build and Push Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/frontend
+          file: ./docker/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.frontend_image }}:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.frontend_image }}:latest
+
+  # ==========================================
+  # STAGE 3: Kubernetes Deployment Validation
+  # ==========================================
+  k8s-validate:
+    name: Validate Kubernetes Manifests
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Dry-Run Validate Kubernetes Manifests
+        run: |
+          kubectl kustomize k8s/
+          kubectl apply --dry-run=client --validate=false -k k8s/
+          echo "Kubernetes manifests successfully passed Kustomize and client-side dry-run validation."
