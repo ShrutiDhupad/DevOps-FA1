@@ -1,6 +1,6 @@
 # DevOps FA2 — CI/CD, Container Orchestration and Observability
 
-[![FA2 CI/CD Pipeline](https://github.com/ShrutiDhupad/DevOps-FA1/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ShrutiDhupad/DevOps-FA1/actions/workflows/ci-cd.yml)
+[![FA2 CI/CD Pipeline](https://github.com/ShrutiDhupad/DevOps-FA2/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ShrutiDhupad/DevOps-FA2/actions/workflows/ci-cd.yml)
 
 ## 1. Project Overview
 
